@@ -1,0 +1,2 @@
+[console_scripts]
+ecrad_gui = ecrad_gui:ECRad_GUI_Application.ECRad_GUI

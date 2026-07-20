@@ -186,6 +186,81 @@ class IMASSelectDialog(wx.Dialog):
             print(e)
             self.EndModal(wx.ID_ABORT)
 
+class AugsfSelectDialog(wx.Dialog):
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent, wx.ID_ANY)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Shot number selector
+        self.shotn_tc = simple_label_tc(self, "Shot", "44140", "string")
+        self.sizer.Add(self.shotn_tc, 0, wx.ALL, 5)
+
+        # Equilibrium
+        self.equilibrium_label = wx.StaticText(self, wx.ID_ANY, "Equilibrium", \
+                                   style=wx.FONTFLAG_BOLD)
+        self.sizer.Add(self.equilibrium_label, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)    
+        
+
+        self.eq_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.eq_exp_tc = simple_label_tc(self, "Exp", "AUGD", "string")
+        self.eq_sizer.Add(self.eq_exp_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        self.eq_diag_tc = simple_label_tc(self, "Diag", "EQH", "string")
+        self.eq_sizer.Add(self.eq_diag_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        self.eq_shot_tc = simple_label_tc(self, "Shot", self.shotn_tc.GetValue(), "string")
+        self.eq_sizer.Add(self.eq_shot_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        self.sizer.Add(self.eq_sizer, 0, wx.ALL | \
+                                    wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        # Something else if needed...
+        # self.equilibrium_label = wx.StaticText(self, wx.ID_ANY, "Equilibrium", \
+        #                            style=wx.FONTFLAG_BOLD)
+        # self.sizer.Add(self.equilibrium_label, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)    
+        
+
+        # self.eq_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # self.eq_exp_tc = simple_label_tc(self, "Exp", "AUGD", "string")
+        # self.eq_sizer.Add(self.eq_exp_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        # self.eq_diag_tc = simple_label_tc(self, "Diag", "EQH", "string")
+        # self.eq_sizer.Add(self.eq_diag_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        # self.eq_shot_tc = simple_label_tc(self, "Shot", 44140, "int")
+        # self.eq_sizer.Add(self.eq_shot_tc, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        # self.sizer.Add(self.eq_sizer, 0, wx.ALL | \
+        #                             wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        # Buttons
+        self.ButtonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.LoadButton = wx.Button(self, wx.ID_ANY, 'Load')
+        self.Bind(wx.EVT_BUTTON, self.OnLoad, self.LoadButton)
+        self.DiscardButton = wx.Button(self, wx.ID_ANY, 'Discard')
+        self.Bind(wx.EVT_BUTTON, self.EvtClose, self.DiscardButton)
+        self.ButtonSizer.Add(self.LoadButton, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        self.ButtonSizer.Add(self.DiscardButton, 0, wx.ALL | wx.ALIGN_BOTTOM, 5)
+        self.sizer.Add(self.ButtonSizer, 0, wx.ALL | \
+                                    wx.ALIGN_CENTER_HORIZONTAL, 5)
+        
+        # Main shot number sync with other shot numbers
+        self.shotn_tc.tc.Bind(wx.EVT_KEY_UP,
+                           lambda event: {
+                               self.eq_shot_tc.SetValue(self.shotn_tc.GetValue())
+                               })
+
+        self.SetSizer(self.sizer)
+        self.SetClientSize(self.GetEffectiveMinSize())
+
+    def eqProps(self):
+        return {
+            'shot': int(self.eq_shot_tc.GetValue()),
+            'exp': self.eq_exp_tc.GetValue(),
+            'diag': self.eq_diag_tc.GetValue(),
+        }
+
+    def EvtClose(self, Event):
+        self.EndModal(wx.ID_ABORT)
+
+    def OnLoad(self, Event):
+        self.EndModal(wx.ID_OK)
+
 class OMASdbSelectDialog(wx.Dialog):
     def __init__(self, parent, minimal=False):
         wx.Dialog.__init__(self, parent, wx.ID_ANY)

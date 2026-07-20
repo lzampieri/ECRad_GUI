@@ -6,7 +6,7 @@ Created on Mar 21, 2019
 from ecrad_pylib.Global_Settings import globalsettings
 import os
 from ecrad_gui.ECRad_GUI_Widgets import simple_label_tc
-from ecrad_gui.ECRad_GUI_Dialogs import IMASTimeBaseSelectDlg,IMASSelectDialog, OMASdbSelectDialog
+from ecrad_gui.ECRad_GUI_Dialogs import IMASTimeBaseSelectDlg,IMASSelectDialog, OMASdbSelectDialog, AugsfSelectDialog
 import wx
 from ecrad_pylib.WX_Events import EVT_UPDATE_DATA, NewStatusEvt, Unbound_EVT_NEW_STATUS, \
                                   Unbound_EVT_REPLOT, LockExportEvt, Unbound_EVT_LOCK_EXPORT, \
@@ -98,6 +98,8 @@ class ScenarioSelectPanel(wx.Panel):
         self.load_Scenario_from_mat_button.Bind(wx.EVT_BUTTON, self.OnLoadScenario)
         self.load_Scenario_from_imas_button = wx.Button(self, wx.ID_ANY, "Load from IMAS database")
         self.load_Scenario_from_imas_button.Bind(wx.EVT_BUTTON, self.OnLoadIMAS)
+        self.load_Scenario_from_augsf_button = wx.Button(self, wx.ID_ANY, "Load from AUG shotfiles")
+        self.load_Scenario_from_augsf_button.Bind(wx.EVT_BUTTON, self.OnLoadAugsf)
         self.load_Scenario_from_omas_button = wx.Button(self, wx.ID_ANY, "Load from OMAS")
         self.load_Scenario_from_omas_button.Bind(wx.EVT_BUTTON, self.OnLoadOMAS)
         self.load_from_mat_button = wx.Button(self, wx.ID_ANY, "Load from *.nc/*.mat")
@@ -124,6 +126,8 @@ class ScenarioSelectPanel(wx.Panel):
         self.control_sizer.Add(self.load_Scenario_from_mat_button, 0, \
                                wx.EXPAND |  wx.ALL, 5)
         self.control_sizer.Add(self.load_Scenario_from_imas_button, 0, \
+                               wx.EXPAND |  wx.ALL, 5)
+        self.control_sizer.Add(self.load_Scenario_from_augsf_button, 0, \
                                wx.EXPAND |  wx.ALL, 5)
         self.control_sizer.Add(self.load_Scenario_from_omas_button, 0, \
                                wx.EXPAND |  wx.ALL, 5)
@@ -877,6 +881,64 @@ class ScenarioSelectPanel(wx.Panel):
                 NewScenario.set_up_profiles_from_imas(prof_ids, eq_ids, times)
                 NewScenario.set_up_equilibrium_from_imas(eq_ids, wall_ids, times)
                 self.SetFromNewScenario(NewScenario, 'IMAS_file')
+            except Exception as e:
+                print(e)
+                print("ERROR: Failed to load Scenario -- there are probably required ")
+                print("entries missing in the IDS.")
+                return
+        dlg.Destroy()
+
+    def OnLoadAugsf(self, evt):
+        import aug_sfutils as sf
+        try: # Todo no idea of what this is doing
+            self.Config = self.Parent.Parent.config_panel.UpdateConfig(self.Config)
+            self.Parent.Parent.config_panel.DisableExtRays()
+        except ValueError as e:
+            print("Failed to parse Configuration")
+            print("Reason: " + e)
+            return
+        dlg = AugsfSelectDialog(self) # Todo check after here
+        if(dlg.ShowModal() == wx.ID_OK):
+            eq = dlg.eqProps()
+
+            # Initialize the scenario
+            NewScenario = ECRadScenario(True)
+            NewScenario["shot"]= eq['shot']
+
+            # Equilibrium: load the equilibrium shotfile
+            NewScenario["plasma"]["eq_dim"] = True
+            NewScenario["plasma"]["eq_data_2D"] = EQData(eq["shot"], EQ_exp=eq['exp'], EQ_diag=eq['diag'])
+            NewScenario["plasma"]["eq_data_2D"].init_read_from_shotfile()
+
+            
+            NewScenario["time"]=NewScenario["plasma"]["eq_data_2D"].times
+
+            np.loadtxt(os.path.join(globalsettings.ECRadPylibRoot, vessel_bd_file), skiprows=1)
+
+            times = db.partial_get(ids_name=time_base_source,data_path='time')
+            NewScenario.set_up_profiles_from_imas(prof_ids, eq_ids, times)
+            self.SetFromNewScenario(NewScenario, 'IMAS_file')
+
+            try:    
+                prof_ids = db.get('core_profiles')
+            except Exception as e:
+                print(e)
+                print("ERROR: Cannot access profiles in IDS")
+                return
+            try:    
+                wall_dlg = IMASSelectDialog(self, description="wall ids", database="ITER_MD",
+                                            shot=116000, run=3)
+                if(wall_dlg.ShowModal() == wx.ID_OK):
+                    wall_dlg.db.open()
+                    wall_ids = wall_dlg.db.get_slice('wall', 0, 1)  
+                    wall_dlg.db.close()
+                else:
+                    print("Cancelled loading ids")
+                    dlg.Destroy()
+            except Exception as e:
+                print(e)
+                print("ERROR: Cannot access wall in IDS")
+                return
             except Exception as e:
                 print(e)
                 print("ERROR: Failed to load Scenario -- there are probably required ")
