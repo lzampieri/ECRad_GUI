@@ -495,8 +495,8 @@ class Main_Panel(scrolled.ScrolledPanel):
                     Results = ECRad_inferface.process_single_timepoint(Results, args[2])
                     output_queue.put([True, Results])
             except Exception as e:
-                print(e)
-                print(traceback.format_exc())
+                print(e, file=sys.stderr )
+                print(traceback.format_exc(), file=sys.stderr)
                 output_queue.put([False, Results])
     
     ECRadRunner = classmethod(ECRadRunner)
@@ -537,6 +537,7 @@ class Main_Panel(scrolled.ScrolledPanel):
             
     def FinishUpECRad(self):
         self.timer.Stop()
+        self.Results["dimensions"]["N_time"] = self.Results.Scenario["dimensions"]["N_time"] # Fix dimensions in the results to match the ones in the scenario
         if(self.Results.Scenario["dimensions"]["N_time"] == 0):
             # Unsuccessful termination
             print("None of the ECRad runs were completed succesfully - sorry")
